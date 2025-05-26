@@ -1,13 +1,15 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, RotateCcw, Plus, Image } from "lucide-react";
+import { FileText, RotateCcw, Plus, Image, Edit, Eye } from "lucide-react";
 import { TranslationDialog } from "@/components/translation-dialog";
 import { ProfilePhotoUpload } from "@/components/editor/profile-photo-upload";
 import { DynamicFieldsManager } from "@/components/editor/dynamic-fields-manager";
+import { LiveEditor } from "@/components/editor/live-editor";
+import { useState } from "react";
 
 interface EditorPanelProps {
   activeMode: 'resume' | 'cover-letter';
@@ -28,6 +30,7 @@ export function EditorPanel({
   onApplyTranslation,
   isMobile = false
 }: EditorPanelProps) {
+  const [editorMode, setEditorMode] = useState<'markdown' | 'live'>('markdown');
   const currentContent = activeMode === 'resume' ? resumeContent : coverLetterContent;
   const handleContentChange = activeMode === 'resume' ? onResumeChange : onCoverLetterChange;
 
@@ -66,10 +69,30 @@ export function EditorPanel({
             <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             <span>Editor</span>
             <Badge variant="outline" className="ml-2 text-xs">
-              Markdown
+              {editorMode === 'live' ? 'Live Edit' : 'Markdown'}
             </Badge>
           </CardTitle>
           <div className="flex items-center space-x-1 sm:space-x-2">
+            <div className="flex border rounded-lg p-1">
+              <Button
+                variant={editorMode === 'markdown' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setEditorMode('markdown')}
+                className="h-7 px-2"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                <span className="text-xs">Code</span>
+              </Button>
+              <Button
+                variant={editorMode === 'live' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setEditorMode('live')}
+                className="h-7 px-2"
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                <span className="text-xs">Live</span>
+              </Button>
+            </div>
             {activeMode === 'resume' && (
               <ProfilePhotoUpload onPhotoUpload={handleProfilePhotoUpload} />
             )}
@@ -84,7 +107,6 @@ export function EditorPanel({
           </div>
         </div>
         
-        {/* Dynamic Fields Manager - Mobile optimized */}
         <DynamicFieldsManager 
           onAddField={handleAddField}
           isMobile={isMobile}
@@ -94,26 +116,42 @@ export function EditorPanel({
       <CardContent className="flex-1 p-0">
         <Tabs value={activeMode} className="h-full flex flex-col">
           <TabsContent value="resume" className="flex-1 m-0">
-            <Textarea
-              value={resumeContent}
-              onChange={(e) => onResumeChange(e.target.value)}
-              placeholder="Write your resume in Markdown..."
-              className={`
-                h-full resize-none border-0 rounded-none focus-visible:ring-0
-                ${isMobile ? 'text-sm font-mono p-3' : 'font-mono text-sm p-4'}
-              `}
-            />
+            {editorMode === 'markdown' ? (
+              <Textarea
+                value={resumeContent}
+                onChange={(e) => onResumeChange(e.target.value)}
+                placeholder="Write your resume in Markdown..."
+                className={`
+                  h-full resize-none border-0 rounded-none focus-visible:ring-0
+                  ${isMobile ? 'text-sm font-mono p-3' : 'font-mono text-sm p-4'}
+                `}
+              />
+            ) : (
+              <LiveEditor
+                content={resumeContent}
+                onContentChange={onResumeChange}
+                className="h-full border-0 rounded-none"
+              />
+            )}
           </TabsContent>
           <TabsContent value="cover-letter" className="flex-1 m-0">
-            <Textarea
-              value={coverLetterContent}
-              onChange={(e) => onCoverLetterChange(e.target.value)}
-              placeholder="Write your cover letter in Markdown..."
-              className={`
-                h-full resize-none border-0 rounded-none focus-visible:ring-0
-                ${isMobile ? 'text-sm font-mono p-3' : 'font-mono text-sm p-4'}
-              `}
-            />
+            {editorMode === 'markdown' ? (
+              <Textarea
+                value={coverLetterContent}
+                onChange={(e) => onCoverLetterChange(e.target.value)}
+                placeholder="Write your cover letter in Markdown..."
+                className={`
+                  h-full resize-none border-0 rounded-none focus-visible:ring-0
+                  ${isMobile ? 'text-sm font-mono p-3' : 'font-mono text-sm p-4'}
+                `}
+              />
+            ) : (
+              <LiveEditor
+                content={coverLetterContent}
+                onContentChange={onCoverLetterChange}
+                className="h-full border-0 rounded-none"
+              />
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>

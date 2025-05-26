@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Sparkles, Search, Zap, Layout, PenTool, Target, CheckCircle, AlertCircle } from "lucide-react";
+import { X, Sparkles, Search, Zap, Layout, PenTool, Target, CheckCircle, AlertCircle, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { geminiService } from "@/services/gemini-ai";
+import { ApiKeyDialog } from "@/components/api-key-dialog";
 
 interface AIToolsSidebarProps {
   isOpen: boolean;
@@ -31,112 +33,34 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
     skills: ""
   });
 
-  const enhanceContent = (content: string): string => {
-    return content
-      .replace(/• (.*)/g, (match, bullet) => {
-        const enhanced = bullet
-          .replace(/worked on/gi, "spearheaded")
-          .replace(/helped/gi, "collaborated to")
-          .replace(/did/gi, "executed")
-          .replace(/made/gi, "developed")
-          .replace(/good/gi, "exceptional")
-          .replace(/increased/gi, "optimized and increased")
-          .replace(/reduced/gi, "streamlined and reduced");
-        return `• ${enhanced}`;
-      })
-      .replace(/Experience/g, "Professional Experience")
-      .replace(/Skills/g, "Core Competencies")
-      .replace(/(\d+)%/g, "$1% improvement")
-      .replace(/team/gi, "cross-functional team");
-  };
-
-  const optimizeForATS = (content: string): string => {
-    const atsKeywords = {
-      'software': ['JavaScript', 'React', 'Node.js', 'Python', 'SQL', 'Git', 'API', 'Agile'],
-      'marketing': ['SEO', 'SEM', 'Analytics', 'CRM', 'Lead Generation', 'Campaign Management'],
-      'sales': ['CRM', 'Lead Generation', 'B2B Sales', 'Customer Acquisition', 'Revenue Growth'],
-      'default': ['Leadership', 'Communication', 'Problem-solving', 'Project Management', 'Team Collaboration']
-    };
-
-    let optimized = content
-      .replace(/##\s/g, '## ')
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/- /g, '• ');
-
-    // Add ATS-friendly formatting
-    if (!content.includes('TECHNICAL SKILLS') && !content.includes('Technical Skills')) {
-      optimized += '\n\n## TECHNICAL SKILLS\n\n• Microsoft Office Suite\n• Project Management\n• Data Analysis\n• Communication\n• Leadership';
-    }
-
-    return optimized;
-  };
-
-  const restructureContent = (content: string): string => {
-    const sections = content.split('## ').filter(Boolean);
-    const reorderedSections = [];
-    
-    // Optimal order for resume sections
-    const sectionOrder = ['Professional Summary', 'Core Competencies', 'Technical Skills', 'Professional Experience', 'Experience', 'Education', 'Projects', 'Certifications'];
-    
-    sectionOrder.forEach(sectionName => {
-      const section = sections.find(s => s.toLowerCase().includes(sectionName.toLowerCase()));
-      if (section) reorderedSections.push('## ' + section);
-    });
-    
-    // Add any remaining sections
-    sections.forEach(section => {
-      if (!reorderedSections.find(rs => rs.includes(section))) {
-        reorderedSections.push('## ' + section);
-      }
-    });
-
-    return reorderedSections.join('\n\n').replace(/##\s##/g, '##');
-  };
-
-  const analyzeJobMatch = (resume: string, jobDesc: string) => {
-    const resumeWords = resume.toLowerCase().split(/\s+/);
-    const jobWords = jobDesc.toLowerCase().split(/\s+/);
-    
-    const commonSkills = ['react', 'javascript', 'python', 'node.js', 'sql', 'git', 'api', 'agile', 'scrum', 'typescript'];
-    const foundSkills = commonSkills.filter(skill => resumeWords.some(word => word.includes(skill)));
-    const missingSkills = commonSkills.filter(skill => 
-      jobWords.some(word => word.includes(skill)) && !resumeWords.some(word => word.includes(skill))
-    );
-
-    const matchScore = Math.round((foundSkills.length / (foundSkills.length + missingSkills.length)) * 100) || 75;
-
-    return {
-      matchScore,
-      foundSkills,
-      missingSkills: missingSkills.slice(0, 5),
-      suggestions: [
-        'Add more quantifiable achievements with specific metrics',
-        'Include relevant industry keywords from the job description',
-        'Highlight leadership and collaboration experiences',
-        'Mention specific tools and technologies used'
-      ]
-    };
-  };
+  const hasApiKey = !!localStorage.getItem('gemini-api-key');
 
   const handleAIOperation = async (operation: string) => {
+    if (!hasApiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please set your Gemini API key to use AI features.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       let enhancedContent = currentContent;
       
       switch (operation) {
         case 'enhance':
-          enhancedContent = enhanceContent(currentContent);
+          enhancedContent = await geminiService.enhanceContent(currentContent);
           onApplyContent(enhancedContent);
           toast({
             title: "Content Enhanced!",
-            description: "Your resume has been improved with stronger action words and better formatting.",
+            description: "Your resume has been improved with AI-powered enhancements.",
           });
           break;
 
         case 'ats-optimize':
-          enhancedContent = optimizeForATS(currentContent);
+          enhancedContent = await geminiService.optimizeForATS(currentContent);
           onApplyContent(enhancedContent);
           toast({
             title: "ATS Optimization Complete!",
@@ -145,7 +69,7 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
           break;
 
         case 'restructure':
-          enhancedContent = restructureContent(currentContent);
+          enhancedContent = await geminiService.restructureContent(currentContent);
           onApplyContent(enhancedContent);
           toast({
             title: "Structure Optimized!",
@@ -163,7 +87,7 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
             return;
           }
           
-          const results = analyzeJobMatch(currentContent, jobDescription);
+          const results = await geminiService.analyzeJobMatch(currentContent, jobDescription);
           setAnalysisResults(results);
           toast({
             title: "Analysis Complete!",
@@ -181,73 +105,18 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
             return;
           }
 
-          enhancedContent = `# ${userInfo.name}
-
-**${userInfo.jobTitle}** | ${userInfo.name.toLowerCase().replace(' ', '.')}@email.com | (555) 123-4567
-LinkedIn: linkedin.com/in/${userInfo.name.toLowerCase().replace(' ', '-')} | Location: City, State
-
----
-
-## Professional Summary
-
-Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || '5+'} years of experience in ${userInfo.industry || 'the industry'}. Proven track record of delivering innovative solutions and driving business growth. ${userInfo.skills ? `Expertise in ${userInfo.skills.split(',').slice(0, 3).join(', ')}.` : 'Strong technical and leadership skills.'}
-
----
-
-## Core Competencies
-
-**Technical Skills:** ${userInfo.skills || 'JavaScript, React, Node.js, Python, SQL, Git'}
-**Leadership:** Team Management, Project Leadership, Strategic Planning, Mentoring
-**Business:** Process Optimization, Cross-functional Collaboration, Stakeholder Management
-
----
-
-## Professional Experience
-
-### Senior ${userInfo.jobTitle} | Company Name | 2020 - Present
-• Spearheaded development of enterprise-level applications serving 10,000+ users
-• Collaborated with cross-functional teams to deliver projects 20% ahead of schedule
-• Implemented best practices that improved code quality and reduced bugs by 35%
-• Mentored junior developers and conducted technical interviews
-
-### ${userInfo.jobTitle} | Previous Company | 2018 - 2020
-• Developed and maintained scalable web applications using modern technologies
-• Optimized database queries resulting in 40% performance improvement
-• Participated in Agile development processes and code review sessions
-• Contributed to technical documentation and knowledge sharing initiatives
-
----
-
-## Education
-
-### Bachelor's Degree in Computer Science | University Name | 2018
-**Relevant Coursework:** Data Structures, Algorithms, Database Design, Software Engineering
-
----
-
-## Projects
-
-### E-commerce Platform
-• Built full-stack web application with React frontend and Node.js backend
-• Implemented secure payment processing and user authentication
-• **Technologies:** React, Node.js, MongoDB, Stripe API
-
-### Task Management System
-• Developed collaborative project management tool for remote teams
-• Integrated real-time notifications and file sharing capabilities
-• **Technologies:** ${userInfo.skills?.split(',').slice(0, 4).join(', ') || 'React, Express, Socket.io, PostgreSQL'}`;
-
+          enhancedContent = await geminiService.buildResume(userInfo);
           onApplyContent(enhancedContent);
           toast({
             title: "Resume Built Successfully!",
-            description: "Your professional resume has been generated and applied to the editor.",
+            description: "Your professional resume has been generated with AI assistance.",
           });
           break;
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to process AI request. Please try again.",
+        title: "AI Error",
+        description: error.message || "Failed to process AI request. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -272,6 +141,7 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
         <div className="flex items-center space-x-2">
           <Sparkles className="h-5 w-5 text-blue-600" />
           <span className="font-semibold">AI Tools</span>
+          {hasApiKey && <Badge variant="secondary" className="text-xs">Ready</Badge>}
         </div>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X className="h-4 w-4" />
@@ -279,6 +149,19 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
       </div>
 
       <div className="p-4">
+        {!hasApiKey && (
+          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="flex items-center space-x-2 mb-2">
+              <Key className="h-4 w-4 text-orange-600" />
+              <span className="text-sm font-medium text-orange-800 dark:text-orange-200">API Key Required</span>
+            </div>
+            <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">
+              Set your Gemini API key to unlock AI-powered features.
+            </p>
+            <ApiKeyDialog onApiKeySet={() => window.location.reload()} />
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 mb-4">
           {tools.map((tool) => (
             <Button
@@ -293,6 +176,12 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
             </Button>
           ))}
         </div>
+
+        {hasApiKey && (
+          <div className="mb-4">
+            <ApiKeyDialog onApiKeySet={() => {}} />
+          </div>
+        )}
 
         <Card>
           <CardHeader className="pb-3">
@@ -317,7 +206,7 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
                 <Button 
                   className="w-full" 
                   onClick={() => handleAIOperation('enhance')}
-                  disabled={isLoading || !currentContent.trim()}
+                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
                 >
                   {isLoading ? "Enhancing..." : "Enhance Content"}
                 </Button>
@@ -347,7 +236,7 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
                 <Button 
                   className="w-full" 
                   onClick={() => handleAIOperation('analyze')}
-                  disabled={isLoading || !jobDescription.trim() || !currentContent.trim()}
+                  disabled={isLoading || !jobDescription.trim() || !currentContent.trim() || !hasApiKey}
                 >
                   {isLoading ? "Analyzing..." : "Analyze Match"}
                 </Button>
@@ -359,36 +248,38 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
                       <span className="text-sm font-medium">Match Score: {analysisResults.matchScore}%</span>
                     </div>
                     
-                    {analysisResults.foundSkills.length > 0 && (
+                    {analysisResults.foundSkills?.length > 0 && (
                       <div className="mb-2">
                         <p className="text-xs font-medium text-green-700 dark:text-green-400">Found Skills:</p>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {analysisResults.foundSkills.map((skill: string) => (
-                            <Badge key={skill} variant="secondary" className="text-xs">{skill}</Badge>
+                          {analysisResults.foundSkills.map((skill: string, index: number) => (
+                            <Badge key={index} variant="secondary" className="text-xs">{skill}</Badge>
                           ))}
                         </div>
                       </div>
                     )}
                     
-                    {analysisResults.missingSkills.length > 0 && (
+                    {analysisResults.missingSkills?.length > 0 && (
                       <div className="mb-2">
                         <p className="text-xs font-medium text-orange-700 dark:text-orange-400">Missing Keywords:</p>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {analysisResults.missingSkills.map((skill: string) => (
-                            <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
+                          {analysisResults.missingSkills.map((skill: string, index: number) => (
+                            <Badge key={index} variant="outline" className="text-xs">{skill}</Badge>
                           ))}
                         </div>
                       </div>
                     )}
                     
-                    <div>
-                      <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Suggestions:</p>
-                      <ul className="text-xs space-y-1">
-                        {analysisResults.suggestions.map((suggestion: string, index: number) => (
-                          <li key={index} className="text-gray-600 dark:text-gray-400">• {suggestion}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    {analysisResults.improvements?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Suggestions:</p>
+                        <ul className="text-xs space-y-1">
+                          {analysisResults.improvements.map((suggestion: string, index: number) => (
+                            <li key={index} className="text-gray-600 dark:text-gray-400">• {suggestion}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -399,17 +290,18 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
                 <Button 
                   className="w-full" 
                   onClick={() => handleAIOperation('enhance')}
-                  disabled={isLoading || !currentContent.trim()}
+                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
                 >
                   {isLoading ? "Enhancing..." : "Enhance Writing"}
                 </Button>
                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                  Transform weak language into powerful, impact-driven statements that showcase your achievements.
+                  Transform weak language into powerful, impact-driven statements with AI assistance.
                 </div>
                 <div className="text-xs bg-green-50 dark:bg-green-900/20 p-2 rounded">
-                  <p className="font-medium text-green-800 dark:text-green-400">Enhancement Examples:</p>
-                  <p className="text-green-700 dark:text-green-300">"worked on" → "spearheaded"</p>
-                  <p className="text-green-700 dark:text-green-300">"helped" → "collaborated to"</p>
+                  <p className="font-medium text-green-800 dark:text-green-400">AI Enhancement:</p>
+                  <p className="text-green-700 dark:text-green-300">• Stronger action words</p>
+                  <p className="text-green-700 dark:text-green-300">• Quantified achievements</p>
+                  <p className="text-green-700 dark:text-green-300">• Professional language</p>
                 </div>
               </div>
             )}
@@ -419,18 +311,18 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
                 <Button 
                   className="w-full" 
                   onClick={() => handleAIOperation('ats-optimize')}
-                  disabled={isLoading || !currentContent.trim()}
+                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
                 >
                   {isLoading ? "Optimizing..." : "Optimize for ATS"}
                 </Button>
                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                  Format your resume to pass through Applicant Tracking Systems and reach human recruiters.
+                  AI-powered optimization for Applicant Tracking Systems to improve visibility.
                 </div>
                 <div className="text-xs bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
                   <p className="font-medium text-blue-800 dark:text-blue-400">ATS Optimization:</p>
+                  <p className="text-blue-700 dark:text-blue-300">• Keyword enhancement</p>
                   <p className="text-blue-700 dark:text-blue-300">• Standard formatting</p>
-                  <p className="text-blue-700 dark:text-blue-300">• Keyword optimization</p>
-                  <p className="text-blue-700 dark:text-blue-300">• Section standardization</p>
+                  <p className="text-blue-700 dark:text-blue-300">• Section optimization</p>
                 </div>
               </div>
             )}
@@ -440,16 +332,18 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
                 <Button 
                   className="w-full" 
                   onClick={() => handleAIOperation('restructure')}
-                  disabled={isLoading || !currentContent.trim()}
+                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
                 >
                   {isLoading ? "Optimizing..." : "Optimize Structure"}
                 </Button>
                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                  Reorganize your resume sections in the optimal order for maximum recruiter impact.
+                  AI-powered reorganization for optimal section order and maximum recruiter impact.
                 </div>
                 <div className="text-xs bg-purple-50 dark:bg-purple-900/20 p-2 rounded">
-                  <p className="font-medium text-purple-800 dark:text-purple-400">Optimal Order:</p>
-                  <p className="text-purple-700 dark:text-purple-300">1. Summary → 2. Skills → 3. Experience → 4. Education</p>
+                  <p className="font-medium text-purple-800 dark:text-purple-400">Structure Optimization:</p>
+                  <p className="text-purple-700 dark:text-purple-300">• Optimal section order</p>
+                  <p className="text-purple-700 dark:text-purple-300">• Improved flow</p>
+                  <p className="text-purple-700 dark:text-purple-300">• Professional layout</p>
                 </div>
               </div>
             )}
@@ -510,12 +404,12 @@ Results-driven ${userInfo.jobTitle.toLowerCase()} with ${userInfo.experience || 
                 <Button 
                   className="w-full" 
                   onClick={() => handleAIOperation('build')}
-                  disabled={isLoading || !userInfo.name || !userInfo.jobTitle}
+                  disabled={isLoading || !userInfo.name || !userInfo.jobTitle || !hasApiKey}
                 >
-                  {isLoading ? "Building..." : "Build Resume"}
+                  {isLoading ? "Building..." : "Build Resume with AI"}
                 </Button>
                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                  Generate a complete professional resume based on your information.
+                  Generate a complete professional resume based on your information using AI.
                 </div>
               </div>
             )}

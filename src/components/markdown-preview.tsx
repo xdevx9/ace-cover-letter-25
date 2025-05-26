@@ -9,44 +9,64 @@ interface MarkdownPreviewProps {
 
 export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   const htmlContent = useMemo(() => {
-    // Simple Markdown to HTML converter
+    // Enhanced Markdown to HTML converter with better styling
     let html = content
-      // Headers
-      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mt-4 mb-2 text-gray-900 dark:text-white">$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-6 mb-3 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1">$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">$1</h1>')
+      // Headers with better styling
+      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mt-6 mb-3 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1">$1</h3>')
+      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-8 mb-4 text-gray-900 dark:text-white border-b-2 border-blue-600 pb-2">$1</h2>')
+      .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white text-center">$1</h1>')
       
-      // Bold text
+      // Bold text with better contrast
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900 dark:text-white">$1</strong>')
       
       // Italic text
-      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+      .replace(/\*(.*?)\*/g, '<em class="italic text-gray-700 dark:text-gray-300">$1</em>')
       
-      // Horizontal rules
-      .replace(/^---$/gm, '<hr class="border-gray-200 dark:border-gray-700 my-4" />')
+      // Horizontal rules with better styling
+      .replace(/^---$/gm, '<hr class="border-gray-300 dark:border-gray-600 my-6 border-t-2" />')
       
-      // Code blocks (inline)
-      .replace(/`(.*?)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">$1</code>')
+      // Code blocks with professional styling
+      .replace(/`(.*?)`/g, '<code class="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm font-mono border">$1</code>')
       
-      // Links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">$1</a>')
+      // Links with better styling
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 font-medium">$1</a>')
       
-      // Line breaks
-      .replace(/\n\n/g, '</p><p class="mb-3 text-gray-700 dark:text-gray-300">')
+      // Bullet points with better formatting
+      .replace(/^• (.*)$/gm, '<li class="ml-4 mb-2 text-gray-700 dark:text-gray-300">$1</li>')
+      
+      // Line breaks and paragraphs
+      .replace(/\n\n/g, '</p><p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">')
       .replace(/\n/g, '<br />');
 
-    // Wrap content in paragraphs
-    html = '<p class="mb-3 text-gray-700 dark:text-gray-300">' + html + '</p>';
+    // Wrap content in paragraphs with better spacing
+    html = '<div class="resume-content"><p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">' + html + '</p></div>';
     
     // Clean up empty paragraphs
-    html = html.replace(/<p class="mb-3 text-gray-700 dark:text-gray-300"><\/p>/g, '');
+    html = html.replace(/<p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed"><\/p>/g, '');
+    
+    // Wrap bullet points in proper ul tags
+    html = html.replace(/(<li class="ml-4 mb-2 text-gray-700 dark:text-gray-300">.*?<\/li>)/gs, (match) => {
+      const listItems = match.match(/<li class="ml-4 mb-2 text-gray-700 dark:text-gray-300">.*?<\/li>/g);
+      if (listItems) {
+        return '<ul class="list-disc pl-6 mb-4 space-y-1">' + listItems.join('').replace(/class="ml-4 mb-2 text-gray-700 dark:text-gray-300"/g, 'class="text-gray-700 dark:text-gray-300"') + '</ul>';
+      }
+      return match;
+    });
     
     return html;
   }, [content]);
 
   return (
     <div 
-      className={cn("prose prose-sm max-w-none", className)}
+      className={cn(
+        "prose prose-sm max-w-none",
+        "prose-headings:text-gray-900 dark:prose-headings:text-white",
+        "prose-p:text-gray-700 dark:prose-p:text-gray-300",
+        "prose-strong:text-gray-900 dark:prose-strong:text-white",
+        "prose-ul:text-gray-700 dark:prose-ul:text-gray-300",
+        "prose-li:text-gray-700 dark:prose-li:text-gray-300",
+        className
+      )}
       dangerouslySetInnerHTML={{ __html: htmlContent }}
     />
   );

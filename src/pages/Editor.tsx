@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Eye, Download, Zap, Layout } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { FileText, Eye, Download, Upload, Save, Sparkles, Globe, FileUp, RotateCcw } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownPreview } from "@/components/markdown-preview";
+import { AIToolsSidebar } from "@/components/ai-tools-sidebar";
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -19,6 +21,8 @@ const Editor = () => {
   const [resumeContent, setResumeContent] = useState("");
   const [coverLetterContent, setCoverLetterContent] = useState("");
   const [activeMode, setActiveMode] = useState<'resume' | 'cover-letter'>('resume');
+  const [showAITools, setShowAITools] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   // Initialize mode from URL params
   useEffect(() => {
@@ -36,14 +40,12 @@ const Editor = () => {
     if (savedResume) {
       setResumeContent(savedResume);
     } else {
-      // Set default resume template
       setResumeContent(getDefaultResumeTemplate());
     }
     
     if (savedCoverLetter) {
       setCoverLetterContent(savedCoverLetter);
     } else {
-      // Set default cover letter template
       setCoverLetterContent(getDefaultCoverLetterTemplate());
     }
   }, []);
@@ -64,74 +66,65 @@ const Editor = () => {
   }, [coverLetterContent]);
 
   const getDefaultResumeTemplate = () => {
-    return `# John Doe
+    return `# Your Name
 
-**Software Engineer** | john.doe@email.com | (555) 123-4567 | LinkedIn: linkedin.com/in/johndoe
+**Professional Title** | your.email@example.com | (XXX) XXX-XXXX | City, State
+**LinkedIn:** linkedin.com/in/yourname | **GitHub:** github.com/yourusername
 
 ---
 
 ## Professional Summary
 
-Experienced software engineer with 5+ years developing scalable web applications. Passionate about creating efficient, maintainable code and delivering exceptional user experiences.
+A brief summary about yourself, your experience, and career goals. Keep it to 2-3 sentences and focus on your professional identity and value proposition.
 
 ---
 
-## Technical Skills
+## Experience
 
-**Programming Languages:** JavaScript, TypeScript, Python, Java
-**Frontend:** React, Vue.js, HTML5, CSS3, Tailwind CSS
-**Backend:** Node.js, Express, Django, REST APIs
-**Databases:** PostgreSQL, MongoDB, Redis
-**Tools:** Git, Docker, AWS, Jest, Webpack
+### Senior Position Title | Company Name | City, State
+*Month Year - Present*
+
+• Led a team of X people to accomplish Y, resulting in Z% improvement
+• Implemented new process that increased efficiency by X%
+• Collaborated with cross-functional teams to deliver project under budget
+
+### Previous Position Title | Previous Company | City, State
+*Month Year - Month Year*
+
+• Achieved X by doing Y, which resulted in Z
+• Managed project with $X budget and delivered on time
+• Improved process efficiency by X% through implementation of Y
 
 ---
 
-## Professional Experience
+## Skills
 
-### Senior Software Engineer | TechCorp Inc.
-*January 2022 - Present*
-
-- Led development of customer-facing web applications serving 100k+ users
-- Improved application performance by 40% through code optimization
-- Mentored junior developers and conducted code reviews
-- Collaborated with cross-functional teams to deliver features on schedule
-
-### Software Engineer | StartupXYZ
-*June 2019 - December 2021*
-
-- Built responsive web applications using React and Node.js
-- Implemented automated testing, reducing bugs by 30%
-- Designed and developed RESTful APIs
-- Participated in agile development processes
+**Programming Languages:** Language 1, Language 2, Language 3
+**Frameworks & Tools:** Framework 1, Framework 2, Tool 1, Tool 2
+**Soft Skills:** Communication, Leadership, Problem-solving, Teamwork
 
 ---
 
 ## Education
 
-### Bachelor of Science in Computer Science
-**University of Technology** | 2015 - 2019
-*Cum Laude, GPA: 3.7/4.0*
+### Degree | University Name
+*Graduation Year*
 
 ---
 
 ## Projects
 
-### E-commerce Platform
-- Built full-stack e-commerce application with React and Node.js
-- Implemented payment processing and inventory management
-- **Tech Stack:** React, Node.js, PostgreSQL, Stripe API
-
-### Task Management App
-- Developed productivity application with real-time collaboration
-- Implemented WebSocket connections for live updates
-- **Tech Stack:** Vue.js, Express, MongoDB, Socket.io`;
+### Project Name
+• Brief description of the project and your role
+• Technologies used and impact achieved
+• **Tech Stack:** Technology 1, Technology 2, Technology 3`;
   };
 
   const getDefaultCoverLetterTemplate = () => {
     return `# Cover Letter
 
-**John Doe**
-john.doe@email.com | (555) 123-4567
+**Your Name**
+your.email@example.com | (XXX) XXX-XXXX
 Date: ${new Date().toLocaleDateString()}
 
 ---
@@ -142,7 +135,7 @@ Date: ${new Date().toLocaleDateString()}
 
 Dear Hiring Manager,
 
-I am writing to express my strong interest in the **[Position Title]** role at **[Company Name]**. With my background in software engineering and passion for creating innovative solutions, I am excited about the opportunity to contribute to your team.
+I am writing to express my strong interest in the **[Position Title]** role at **[Company Name]**. With my background in [your field] and passion for [relevant area], I am excited about the opportunity to contribute to your team.
 
 ## Why I'm Interested
 
@@ -150,23 +143,23 @@ Your company's commitment to **[specific company value/mission]** resonates with
 
 ## What I Bring
 
-In my current role as a Senior Software Engineer, I have:
+In my current role, I have:
 
-- Led development projects that improved performance by 40%
-- Mentored junior developers and fostered collaborative team environments
-- Delivered high-quality software solutions that serve thousands of users daily
-- Worked with modern technologies including React, Node.js, and cloud platforms
+• [Specific achievement with metrics]
+• [Leadership or collaboration example]
+• [Technical or industry-specific accomplishment]
+• [Process improvement or innovation example]
 
 ## Next Steps
 
-I would welcome the opportunity to discuss how my technical skills and passion for innovation can contribute to **[Company Name]**'s continued success. Thank you for considering my application.
+I would welcome the opportunity to discuss how my skills and passion can contribute to **[Company Name]**'s continued success. Thank you for considering my application.
 
 Sincerely,
-John Doe
+Your Name
 
 ---
 
-*This cover letter was created with ResumeAce - AI-powered resume and cover letter builder*`;
+*This cover letter was created with ResumeAce*`;
   };
 
   const handleExport = (format: 'html' | 'pdf' | 'txt') => {
@@ -189,70 +182,151 @@ John Doe
     });
   };
 
+  const handleUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.md';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          if (activeMode === 'resume') {
+            setResumeContent(content);
+          } else {
+            setCoverLetterContent(content);
+          }
+          toast({
+            title: "File Uploaded",
+            description: `${file.name} has been loaded into the editor.`,
+          });
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  const handleSave = () => {
+    localStorage.setItem(`resumeace-${activeMode}-content`, activeMode === 'resume' ? resumeContent : coverLetterContent);
+    toast({
+      title: "Saved",
+      description: `Your ${activeMode} has been saved locally.`,
+    });
+  };
+
+  const applyAIContent = (content: string) => {
+    if (activeMode === 'resume') {
+      setResumeContent(content);
+    } else {
+      setCoverLetterContent(content);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="border-b bg-white dark:bg-gray-800 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/')}
-              className="flex items-center space-x-2"
-            >
-              <div className="bg-blue-600 text-white p-1.5 rounded">
-                <FileText className="h-4 w-4" />
-              </div>
-              <span className="font-bold">ResumeAce</span>
-            </Button>
-            <Badge variant="secondary">
-              {activeMode === 'resume' ? 'Resume Editor' : 'Cover Letter Editor'}
-            </Badge>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={() => handleExport('txt')}>
-              <Download className="h-4 w-4 mr-1" />
-              Export
-            </Button>
-            <ThemeToggle />
+      {/* Professional Header */}
+      <header className="border-b bg-white dark:bg-gray-800 sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/')}
+                className="flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <div className="bg-blue-600 text-white p-1.5 rounded">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <span className="font-bold text-lg">ResumeAce</span>
+              </Button>
+              
+              <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as 'resume' | 'cover-letter')}>
+                <TabsList className="bg-gray-100 dark:bg-gray-700">
+                  <TabsTrigger value="resume" className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Resume</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="cover-letter" className="flex items-center space-x-2">
+                    <FileUp className="h-4 w-4" />
+                    <span>Cover Letter</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)}>
+                Templates
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleUpload}>
+                <Upload className="h-4 w-4 mr-1" />
+                Upload
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSave}>
+                <Save className="h-4 w-4 mr-1" />
+                Save
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleExport('txt')}>
+                <Download className="h-4 w-4 mr-1" />
+                Export
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => setShowAITools(!showAITools)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                AI Tools
+              </Button>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto p-4">
-        <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-120px)]">
+        <div className={`grid gap-6 transition-all duration-300 ${showAITools ? 'lg:grid-cols-[1fr,2fr] mr-96' : 'lg:grid-cols-2'} h-[calc(100vh-120px)]`}>
           {/* Editor Panel */}
           <Card className="flex flex-col">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center space-x-2">
-                  <Layout className="h-5 w-5" />
+                  <FileText className="h-5 w-5 text-blue-600" />
                   <span>Editor</span>
+                  <Badge variant="outline" className="ml-2">
+                    Markdown
+                  </Badge>
                 </CardTitle>
-                <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as 'resume' | 'cover-letter')}>
-                  <TabsList className="grid w-fit grid-cols-2">
-                    <TabsTrigger value="resume">Resume</TabsTrigger>
-                    <TabsTrigger value="cover-letter">Cover Letter</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <div className="flex items-center space-x-2">
+                  <Button variant="ghost" size="sm">
+                    <Globe className="h-4 w-4 mr-1" />
+                    Translate
+                  </Button>
+                  <Button variant="ghost" size="sm">
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 p-3">
-              <Tabs value={activeMode}>
-                <TabsContent value="resume" className="h-full mt-0">
+            <CardContent className="flex-1 p-0">
+              <Tabs value={activeMode} className="h-full flex flex-col">
+                <TabsContent value="resume" className="flex-1 m-0">
                   <Textarea
                     value={resumeContent}
                     onChange={(e) => setResumeContent(e.target.value)}
                     placeholder="Write your resume in Markdown..."
-                    className="h-full resize-none font-mono text-sm"
+                    className="h-full resize-none font-mono text-sm border-0 rounded-none focus-visible:ring-0"
                   />
                 </TabsContent>
-                <TabsContent value="cover-letter" className="h-full mt-0">
+                <TabsContent value="cover-letter" className="flex-1 m-0">
                   <Textarea
                     value={coverLetterContent}
                     onChange={(e) => setCoverLetterContent(e.target.value)}
                     placeholder="Write your cover letter in Markdown..."
-                    className="h-full resize-none font-mono text-sm"
+                    className="h-full resize-none font-mono text-sm border-0 rounded-none focus-visible:ring-0"
                   />
                 </TabsContent>
               </Tabs>
@@ -261,50 +335,40 @@ John Doe
 
           {/* Preview Panel */}
           <Card className="flex flex-col">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center space-x-2">
-                <Eye className="h-5 w-5" />
-                <span>Live Preview</span>
-              </CardTitle>
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <Eye className="h-5 w-5 text-green-600" />
+                  <span>Live Preview</span>
+                </CardTitle>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary">Auto-save</Badge>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-1" />
+                    PDF
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="flex-1 p-3">
-              <div className="h-full border rounded-lg bg-white dark:bg-gray-950 overflow-auto">
+            <CardContent className="flex-1 p-0">
+              <div className="h-full border-0 bg-white dark:bg-gray-950 overflow-auto">
                 <MarkdownPreview 
                   content={activeMode === 'resume' ? resumeContent : coverLetterContent}
-                  className="p-6"
+                  className="p-6 min-h-full"
                 />
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* AI Tools Panel */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Zap className="h-5 w-5" />
-              <span>AI Tools</span>
-              <Badge className="ml-2">Coming Soon</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
-              <Button variant="outline" disabled className="h-20 flex flex-col space-y-2">
-                <Zap className="h-5 w-5" />
-                <span>AI Enhancer</span>
-              </Button>
-              <Button variant="outline" disabled className="h-20 flex flex-col space-y-2">
-                <FileText className="h-5 w-5" />
-                <span>Template Library</span>
-              </Button>
-              <Button variant="outline" disabled className="h-20 flex flex-col space-y-2">
-                <Eye className="h-5 w-5" />
-                <span>ATS Analysis</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* AI Tools Sidebar */}
+      <AIToolsSidebar
+        isOpen={showAITools}
+        onClose={() => setShowAITools(false)}
+        onApplyContent={applyAIContent}
+        currentContent={activeMode === 'resume' ? resumeContent : coverLetterContent}
+      />
     </div>
   );
 };

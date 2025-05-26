@@ -148,9 +148,14 @@ Experienced ${userInfo.jobTitle?.toLowerCase() || 'professional'} with ${userInf
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center space-x-2">
-              {tools.find(t => t.id === activeTab)?.icon && (
-                <tools.find(t => t.id === activeTab)!.icon className="h-4 w-4" />
-              )}
+              {(() => {
+                const activeTool = tools.find(t => t.id === activeTab);
+                if (activeTool) {
+                  const IconComponent = activeTool.icon;
+                  return <IconComponent className="h-4 w-4" />;
+                }
+                return null;
+              })()}
               <span>{tools.find(t => t.id === activeTab)?.label}</span>
             </CardTitle>
             <p className="text-xs text-gray-600 dark:text-gray-400">

@@ -3,13 +3,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { X, Sparkles, Search, Zap, Layout, PenTool, Target, CheckCircle, AlertCircle, Key } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { geminiService } from "@/services/gemini-ai";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
+import { AI_TOOLS, AIToolId } from "@/config/ai-tools";
+import { ApiKeyNotification } from "@/components/ai-tools/api-key-notification";
+import { ToolsNavigation } from "@/components/ai-tools/tools-navigation";
+import { SmartEditorTool } from "@/components/ai-tools/smart-editor-tool";
+import { JobAnalyzerTool } from "@/components/ai-tools/job-analyzer-tool";
+import { ResumeBuilderTool } from "@/components/ai-tools/resume-builder-tool";
+import { SimpleTool } from "@/components/ai-tools/simple-tool";
 
 interface AIToolsSidebarProps {
   isOpen: boolean;
@@ -19,23 +23,14 @@ interface AIToolsSidebarProps {
 }
 
 export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent }: AIToolsSidebarProps) {
-  const [activeTab, setActiveTab] = useState<'smart-editor' | 'job-analyzer' | 'content-enhancer' | 'ats-optimizer' | 'structure-optimizer' | 'resume-builder'>('smart-editor');
+  const [activeTab, setActiveTab] = useState<AIToolId>('smart-editor');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
-  const [jobDescription, setJobDescription] = useState("");
   const [analysisResults, setAnalysisResults] = useState<any>(null);
-  const [userInfo, setUserInfo] = useState({
-    name: "",
-    jobTitle: "",
-    industry: "",
-    experience: "",
-    skills: ""
-  });
+  const { toast } = useToast();
 
   const hasApiKey = !!localStorage.getItem('gemini-api-key');
 
-  const handleAIOperation = async (operation: string) => {
+  const handleAIOperation = async (operation: string, data?: any) => {
     if (!hasApiKey) {
       toast({
         title: "API Key Required",
@@ -78,7 +73,7 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
           break;
 
         case 'analyze':
-          if (!jobDescription.trim()) {
+          if (!data?.trim()) {
             toast({
               title: "Job Description Required",
               description: "Please paste a job description to analyze your resume match.",
@@ -87,7 +82,7 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
             return;
           }
           
-          const results = await geminiService.analyzeJobMatch(currentContent, jobDescription);
+          const results = await geminiService.analyzeJobMatch(currentContent, data);
           setAnalysisResults(results);
           toast({
             title: "Analysis Complete!",
@@ -96,7 +91,7 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
           break;
 
         case 'build':
-          if (!userInfo.name || !userInfo.jobTitle) {
+          if (!data?.name || !data?.jobTitle) {
             toast({
               title: "Missing Information",
               description: "Please fill in at least your name and target job title.",
@@ -105,7 +100,7 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
             return;
           }
 
-          enhancedContent = await geminiService.buildResume(userInfo);
+          enhancedContent = await geminiService.buildResume(data);
           onApplyContent(enhancedContent);
           toast({
             title: "Resume Built Successfully!",
@@ -126,14 +121,92 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
 
   if (!isOpen) return null;
 
-  const tools = [
-    { id: 'smart-editor', icon: Sparkles, label: 'Smart Editor', description: 'AI-powered content enhancement' },
-    { id: 'job-analyzer', icon: Search, label: 'Job Analyzer', description: 'Match against job descriptions' },
-    { id: 'content-enhancer', icon: Zap, label: 'Content Enhancer', description: 'Improve writing and impact' },
-    { id: 'ats-optimizer', icon: Target, label: 'ATS Optimizer', description: 'Optimize for applicant tracking systems' },
-    { id: 'structure-optimizer', icon: Layout, label: 'Structure Optimizer', description: 'Optimize layout and organization' },
-    { id: 'resume-builder', icon: PenTool, label: 'Resume Builder', description: 'Build from scratch with AI' }
-  ];
+  const renderToolContent = () => {
+    switch (activeTab) {
+      case 'smart-editor':
+        return (
+          <SmartEditorTool
+            onEnhance={() => handleAIOperation('enhance')}
+            isLoading={isLoading}
+            hasContent={!!currentContent.trim()}
+            hasApiKey={hasApiKey}
+          />
+        );
+
+      case 'job-analyzer':
+        return (
+          <JobAnalyzerTool
+            onAnalyze={(jobDescription) => handleAIOperation('analyze', jobDescription)}
+            isLoading={isLoading}
+            hasContent={!!currentContent.trim()}
+            hasApiKey={hasApiKey}
+            analysisResults={analysisResults}
+          />
+        );
+
+      case 'content-enhancer':
+        return (
+          <SimpleTool
+            title="AI Enhancement"
+            description="Transform weak language into powerful, impact-driven statements with AI assistance."
+            actionLabel="Enhance Writing"
+            loadingLabel="Enhancing..."
+            features={["Stronger action words", "Quantified achievements", "Professional language"]}
+            featureColor="bg-green-50 dark:bg-green-900/20"
+            onAction={() => handleAIOperation('enhance')}
+            isLoading={isLoading}
+            hasContent={!!currentContent.trim()}
+            hasApiKey={hasApiKey}
+          />
+        );
+
+      case 'ats-optimizer':
+        return (
+          <SimpleTool
+            title="ATS Optimization"
+            description="AI-powered optimization for Applicant Tracking Systems to improve visibility."
+            actionLabel="Optimize for ATS"
+            loadingLabel="Optimizing..."
+            features={["Keyword enhancement", "Standard formatting", "Section optimization"]}
+            featureColor="bg-blue-50 dark:bg-blue-900/20"
+            onAction={() => handleAIOperation('ats-optimize')}
+            isLoading={isLoading}
+            hasContent={!!currentContent.trim()}
+            hasApiKey={hasApiKey}
+          />
+        );
+
+      case 'structure-optimizer':
+        return (
+          <SimpleTool
+            title="Structure Optimization"
+            description="AI-powered reorganization for optimal section order and maximum recruiter impact."
+            actionLabel="Optimize Structure"
+            loadingLabel="Optimizing..."
+            features={["Optimal section order", "Improved flow", "Professional layout"]}
+            featureColor="bg-purple-50 dark:bg-purple-900/20"
+            onAction={() => handleAIOperation('restructure')}
+            isLoading={isLoading}
+            hasContent={!!currentContent.trim()}
+            hasApiKey={hasApiKey}
+          />
+        );
+
+      case 'resume-builder':
+        return (
+          <ResumeBuilderTool
+            onBuild={(userInfo) => handleAIOperation('build', userInfo)}
+            isLoading={isLoading}
+            hasApiKey={hasApiKey}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const activeTool = AI_TOOLS.find(t => t.id === activeTab);
 
   return (
     <div className="fixed right-0 top-0 h-full w-96 bg-white dark:bg-gray-900 border-l shadow-lg z-50 overflow-y-auto">
@@ -150,32 +223,10 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
 
       <div className="p-4">
         {!hasApiKey && (
-          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-            <div className="flex items-center space-x-2 mb-2">
-              <Key className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-medium text-orange-800 dark:text-orange-200">API Key Required</span>
-            </div>
-            <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">
-              Set your Gemini API key to unlock AI-powered features.
-            </p>
-            <ApiKeyDialog onApiKeySet={() => window.location.reload()} />
-          </div>
+          <ApiKeyNotification onApiKeySet={() => window.location.reload()} />
         )}
 
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {tools.map((tool) => (
-            <Button
-              key={tool.id}
-              variant={activeTab === tool.id ? "default" : "outline"}
-              size="sm"
-              className="h-auto p-2 flex flex-col items-center text-xs"
-              onClick={() => setActiveTab(tool.id as any)}
-            >
-              <tool.icon className="h-4 w-4 mb-1" />
-              <span className="text-center">{tool.label}</span>
-            </Button>
-          ))}
-        </div>
+        <ToolsNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
         {hasApiKey && (
           <div className="mb-4">
@@ -186,233 +237,15 @@ export function AIToolsSidebar({ isOpen, onClose, onApplyContent, currentContent
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center space-x-2">
-              {(() => {
-                const activeTool = tools.find(t => t.id === activeTab);
-                if (activeTool) {
-                  const IconComponent = activeTool.icon;
-                  return <IconComponent className="h-4 w-4" />;
-                }
-                return null;
-              })()}
-              <span>{tools.find(t => t.id === activeTab)?.label}</span>
+              {activeTool && <activeTool.icon className="h-4 w-4" />}
+              <span>{activeTool?.label}</span>
             </CardTitle>
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              {tools.find(t => t.id === activeTab)?.description}
+              {activeTool?.description}
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {activeTab === 'smart-editor' && (
-              <div className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAIOperation('enhance')}
-                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
-                >
-                  {isLoading ? "Enhancing..." : "Enhance Content"}
-                </Button>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  AI will improve your resume with stronger action words, better formatting, and professional language.
-                </div>
-                {!currentContent.trim() && (
-                  <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center space-x-1">
-                    <AlertCircle className="h-3 w-3" />
-                    <span>Add content to your resume first</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'job-analyzer' && (
-              <div className="space-y-3">
-                <Label htmlFor="job-desc" className="text-xs">Job Description</Label>
-                <Textarea
-                  id="job-desc"
-                  placeholder="Paste the job description here to analyze your resume match..."
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  className="text-xs"
-                  rows={4}
-                />
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAIOperation('analyze')}
-                  disabled={isLoading || !jobDescription.trim() || !currentContent.trim() || !hasApiKey}
-                >
-                  {isLoading ? "Analyzing..." : "Analyze Match"}
-                </Button>
-                
-                {analysisResults && (
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium">Match Score: {analysisResults.matchScore}%</span>
-                    </div>
-                    
-                    {analysisResults.foundSkills?.length > 0 && (
-                      <div className="mb-2">
-                        <p className="text-xs font-medium text-green-700 dark:text-green-400">Found Skills:</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {analysisResults.foundSkills.map((skill: string, index: number) => (
-                            <Badge key={index} variant="secondary" className="text-xs">{skill}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {analysisResults.missingSkills?.length > 0 && (
-                      <div className="mb-2">
-                        <p className="text-xs font-medium text-orange-700 dark:text-orange-400">Missing Keywords:</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {analysisResults.missingSkills.map((skill: string, index: number) => (
-                            <Badge key={index} variant="outline" className="text-xs">{skill}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {analysisResults.improvements?.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Suggestions:</p>
-                        <ul className="text-xs space-y-1">
-                          {analysisResults.improvements.map((suggestion: string, index: number) => (
-                            <li key={index} className="text-gray-600 dark:text-gray-400">• {suggestion}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'content-enhancer' && (
-              <div className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAIOperation('enhance')}
-                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
-                >
-                  {isLoading ? "Enhancing..." : "Enhance Writing"}
-                </Button>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  Transform weak language into powerful, impact-driven statements with AI assistance.
-                </div>
-                <div className="text-xs bg-green-50 dark:bg-green-900/20 p-2 rounded">
-                  <p className="font-medium text-green-800 dark:text-green-400">AI Enhancement:</p>
-                  <p className="text-green-700 dark:text-green-300">• Stronger action words</p>
-                  <p className="text-green-700 dark:text-green-300">• Quantified achievements</p>
-                  <p className="text-green-700 dark:text-green-300">• Professional language</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'ats-optimizer' && (
-              <div className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAIOperation('ats-optimize')}
-                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
-                >
-                  {isLoading ? "Optimizing..." : "Optimize for ATS"}
-                </Button>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  AI-powered optimization for Applicant Tracking Systems to improve visibility.
-                </div>
-                <div className="text-xs bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                  <p className="font-medium text-blue-800 dark:text-blue-400">ATS Optimization:</p>
-                  <p className="text-blue-700 dark:text-blue-300">• Keyword enhancement</p>
-                  <p className="text-blue-700 dark:text-blue-300">• Standard formatting</p>
-                  <p className="text-blue-700 dark:text-blue-300">• Section optimization</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'structure-optimizer' && (
-              <div className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAIOperation('restructure')}
-                  disabled={isLoading || !currentContent.trim() || !hasApiKey}
-                >
-                  {isLoading ? "Optimizing..." : "Optimize Structure"}
-                </Button>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  AI-powered reorganization for optimal section order and maximum recruiter impact.
-                </div>
-                <div className="text-xs bg-purple-50 dark:bg-purple-900/20 p-2 rounded">
-                  <p className="font-medium text-purple-800 dark:text-purple-400">Structure Optimization:</p>
-                  <p className="text-purple-700 dark:text-purple-300">• Optimal section order</p>
-                  <p className="text-purple-700 dark:text-purple-300">• Improved flow</p>
-                  <p className="text-purple-700 dark:text-purple-300">• Professional layout</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'resume-builder' && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-xs">Full Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="John Smith"
-                    value={userInfo.name}
-                    onChange={(e) => setUserInfo({...userInfo, name: e.target.value})}
-                    className="text-xs"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle" className="text-xs">Target Job Title *</Label>
-                  <Input
-                    id="jobTitle"
-                    placeholder="Software Engineer"
-                    value={userInfo.jobTitle}
-                    onChange={(e) => setUserInfo({...userInfo, jobTitle: e.target.value})}
-                    className="text-xs"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="industry" className="text-xs">Industry</Label>
-                  <Input
-                    id="industry"
-                    placeholder="Technology"
-                    value={userInfo.industry}
-                    onChange={(e) => setUserInfo({...userInfo, industry: e.target.value})}
-                    className="text-xs"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="experience" className="text-xs">Years of Experience</Label>
-                  <Input
-                    id="experience"
-                    placeholder="5"
-                    value={userInfo.experience}
-                    onChange={(e) => setUserInfo({...userInfo, experience: e.target.value})}
-                    className="text-xs"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="skills" className="text-xs">Key Skills</Label>
-                  <Textarea
-                    id="skills"
-                    placeholder="JavaScript, React, Node.js, Python, SQL"
-                    value={userInfo.skills}
-                    onChange={(e) => setUserInfo({...userInfo, skills: e.target.value})}
-                    className="text-xs"
-                    rows={3}
-                  />
-                </div>
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAIOperation('build')}
-                  disabled={isLoading || !userInfo.name || !userInfo.jobTitle || !hasApiKey}
-                >
-                  {isLoading ? "Building..." : "Build Resume with AI"}
-                </Button>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  Generate a complete professional resume based on your information using AI.
-                </div>
-              </div>
-            )}
+            {renderToolContent()}
           </CardContent>
         </Card>
       </div>

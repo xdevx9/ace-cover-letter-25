@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ const Editor = () => {
   
   const [resumeContent, setResumeContent] = useState("");
   const [coverLetterContent, setCoverLetterContent] = useState("");
-  const [activeMode, setActiveMode<'resume' | 'cover-letter'>('resume');
+  const [activeMode, setActiveMode] = useState<'resume' | 'cover-letter'>('resume');
   const [showAITools, setShowAITools] = useState(false);
 
   // Initialize mode from URL params

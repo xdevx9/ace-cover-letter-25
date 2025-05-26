@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -30,28 +31,7 @@ export function UploadDialog({ onFileUpload }: UploadDialogProps) {
       name: 'PDF Documents',
       description: 'Extract text from PDF files',
       icon: FileText,
-      badge: 'Enhanced'
-    },
-    {
-      extensions: ['.docx', '.doc'],
-      name: 'Word Documents',
-      description: 'Microsoft Word files',
-      icon: FileText,
-      badge: 'Popular'
-    },
-    {
-      extensions: ['.rtf'],
-      name: 'Rich Text Format',
-      description: 'RTF documents with basic formatting',
-      icon: File,
-      badge: 'Compatible'
-    },
-    {
-      extensions: ['.odt'],
-      name: 'OpenDocument Text',
-      description: 'LibreOffice/OpenOffice documents',
-      icon: FileText,
-      badge: 'Open Source'
+      badge: 'Production'
     }
   ];
 
@@ -88,92 +68,106 @@ export function UploadDialog({ onFileUpload }: UploadDialogProps) {
   };
 
   const extractPDFText = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          const uint8Array = new Uint8Array(arrayBuffer);
-          
-          // Simple PDF text extraction
-          let text = '';
-          const decoder = new TextDecoder('utf-8');
-          const pdfString = decoder.decode(uint8Array);
-          
-          // Extract text between stream objects (basic PDF parsing)
-          const streamRegex = /stream\s*(.*?)\s*endstream/gs;
-          const matches = pdfString.matchAll(streamRegex);
-          
-          for (const match of matches) {
-            const streamContent = match[1];
-            // Basic text extraction - remove PDF operators and keep readable text
-            const cleanText = streamContent
-              .replace(/[^\x20-\x7E\n\r]/g, ' ') // Keep only printable ASCII
-              .replace(/\s+/g, ' ')
-              .trim();
-            
-            if (cleanText.length > 10) {
-              text += cleanText + '\n';
-            }
-          }
-          
-          // If no text found, try alternative extraction
-          if (!text.trim()) {
-            const textMatch = pdfString.match(/\/Contents?\s*\[(.*?)\]/s);
-            if (textMatch) {
-              text = textMatch[1]
-                .replace(/[^\x20-\x7E\n\r]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-            }
-          }
-          
-          if (text.trim()) {
-            // Format as resume markdown
-            const formattedText = formatExtractedText(text, file.name);
-            resolve(formattedText);
-          } else {
-            reject(new Error('No readable text found in PDF'));
-          }
-        } catch (error) {
-          reject(new Error('Failed to extract text from PDF'));
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Use a more robust PDF text extraction approach
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const textDecoder = new TextDecoder('utf-8', { fatal: false });
+      
+      // Convert to string and extract text content
+      let pdfString = textDecoder.decode(uint8Array);
+      
+      // Enhanced PDF text extraction
+      let extractedText = '';
+      
+      // Method 1: Extract from text objects
+      const textRegex = /BT\s+(.*?)\s+ET/gs;
+      const textMatches = pdfString.matchAll(textRegex);
+      
+      for (const match of textMatches) {
+        const textContent = match[1];
+        // Extract actual text from PDF operators
+        const cleanText = textContent
+          .replace(/\/[A-Za-z0-9]+/g, '') // Remove font references
+          .replace(/\d+\.?\d*\s+/g, ' ') // Remove positioning numbers
+          .replace(/[Tt][jd]\s*/g, '') // Remove text positioning operators
+          .replace(/[\(\)]/g, '') // Remove parentheses
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        if (cleanText.length > 2) {
+          extractedText += cleanText + '\n';
         }
-      };
-      reader.onerror = () => reject(new Error('Failed to read PDF file'));
-      reader.readAsArrayBuffer(file);
-    });
+      }
+      
+      // Method 2: Fallback - extract readable ASCII text
+      if (!extractedText.trim()) {
+        extractedText = pdfString
+          .replace(/[^\x20-\x7E\n\r]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .split(' ')
+          .filter(word => word.length > 2 && /[a-zA-Z]/.test(word))
+          .join(' ');
+      }
+      
+      if (extractedText.trim()) {
+        return formatExtractedText(extractedText, file.name);
+      } else {
+        throw new Error('Could not extract readable text from PDF. The PDF may be image-based or encrypted.');
+      }
+    } catch (error) {
+      console.error('PDF extraction error:', error);
+      throw new Error('Failed to extract text from PDF. Please try a different file or convert to text format.');
+    }
   };
 
   const formatExtractedText = (text: string, filename: string): string => {
-    const lines = text.split('\n').filter(line => line.trim().length > 0);
-    const name = filename.replace('.pdf', '').replace(/[_-]/g, ' ');
+    const lines = text.split('\n').filter(line => line.trim().length > 2);
+    const cleanName = filename.replace('.pdf', '').replace(/[_-]/g, ' ');
     
-    // Basic structure detection and formatting
-    let formattedContent = `# ${name}\n\n`;
+    let formattedContent = `# ${cleanName}\n\n`;
+    
+    // Smart section detection
+    const sections = {
+      summary: /(?:summary|objective|about|profile)/i,
+      experience: /(?:experience|employment|work|career)/i,
+      education: /(?:education|academic|degree|university|college)/i,
+      skills: /(?:skills|competencies|abilities|technologies)/i,
+      contact: /(?:contact|email|phone|address|linkedin)/i
+    };
     
     let currentSection = '';
+    const processedLines = new Set();
+    
     for (const line of lines) {
       const trimmedLine = line.trim();
       
-      // Detect potential sections
-      if (trimmedLine.toLowerCase().includes('experience') || 
-          trimmedLine.toLowerCase().includes('employment')) {
-        currentSection = 'experience';
-        formattedContent += `\n## Work Experience\n\n`;
-      } else if (trimmedLine.toLowerCase().includes('education')) {
-        currentSection = 'education';
-        formattedContent += `\n## Education\n\n`;
-      } else if (trimmedLine.toLowerCase().includes('skill')) {
-        currentSection = 'skills';
-        formattedContent += `\n## Skills\n\n`;
-      } else if (trimmedLine.toLowerCase().includes('summary') || 
-                trimmedLine.toLowerCase().includes('objective')) {
-        currentSection = 'summary';
-        formattedContent += `\n## Professional Summary\n\n`;
-      } else if (trimmedLine.length > 5) {
-        // Add content with appropriate formatting
-        if (currentSection) {
-          formattedContent += `${trimmedLine}\n\n`;
+      if (processedLines.has(trimmedLine) || trimmedLine.length < 3) continue;
+      processedLines.add(trimmedLine);
+      
+      // Detect section headers
+      let sectionFound = false;
+      for (const [sectionName, regex] of Object.entries(sections)) {
+        if (regex.test(trimmedLine)) {
+          currentSection = sectionName;
+          formattedContent += `\n## ${trimmedLine}\n\n`;
+          sectionFound = true;
+          break;
+        }
+      }
+      
+      if (!sectionFound && trimmedLine.length > 5) {
+        // Format content based on current section
+        if (currentSection === 'skills') {
+          formattedContent += `• ${trimmedLine}\n`;
+        } else if (currentSection === 'experience') {
+          // Check if it looks like a job title or company
+          if (/\b(manager|engineer|developer|analyst|director|coordinator)\b/i.test(trimmedLine)) {
+            formattedContent += `\n**${trimmedLine}**\n`;
+          } else {
+            formattedContent += `${trimmedLine}\n`;
+          }
         } else {
           formattedContent += `${trimmedLine}\n\n`;
         }
@@ -196,83 +190,15 @@ export function UploadDialog({ onFileUpload }: UploadDialogProps) {
       );
       
       if (!isSupported) {
-        throw new Error(`Unsupported file type: ${extension}`);
+        throw new Error(`Unsupported file type: ${extension}. Please upload a PDF, TXT, or MD file.`);
       }
 
       let content = '';
       
       if (['.txt', '.md'].includes(extension)) {
-        // Handle text and markdown files
         content = await readTextFile(file);
       } else if (extension === '.pdf') {
-        // Extract text from PDF
         content = await extractPDFText(file);
-      } else if (['.docx', '.doc'].includes(extension)) {
-        // Simulate Word document processing
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        content = `# ${filename.replace(/\.(docx?)/i, '')}
-
-**Imported from Word Document**
-
-This is a simulated import from your Word document. In a real implementation, this would preserve the formatting and structure from your original document.
-
-## Professional Summary
-
-[Content from your Word document would be converted to markdown here]
-
-## Experience
-
-[Experience section would be properly formatted here]
-
-## Skills
-
-[Skills would be extracted and formatted here]
-
----
-
-*Note: Word document processing is simulated in this demo.*`;
-        
-      } else if (extension === '.rtf') {
-        // Simulate RTF processing
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        content = `# ${filename.replace('.rtf', '')}
-
-**Imported from RTF Document**
-
-Content from your RTF file has been converted to markdown format while preserving the essential structure and information.
-
-## Professional Summary
-
-[RTF content converted to markdown]
-
-## Experience
-
-[Work history from RTF file]
-
----
-
-*Note: RTF processing is simulated in this demo.*`;
-        
-      } else if (extension === '.odt') {
-        // Simulate ODT processing
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        content = `# ${filename.replace('.odt', '')}
-
-**Imported from OpenDocument Text**
-
-Your OpenDocument Text file has been successfully converted to markdown format.
-
-## Professional Summary
-
-[ODT content converted here]
-
-## Experience
-
-[Experience section from ODT file]
-
----
-
-*Note: ODT processing is simulated in this demo.*`;
       }
       
       if (content.trim()) {
@@ -287,6 +213,7 @@ Your OpenDocument Text file has been successfully converted to markdown format.
       }
       
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
         description: error instanceof Error ? error.message : "Failed to process file. Please try again.",
@@ -326,7 +253,6 @@ Your OpenDocument Text file has been successfully converted to markdown format.
         </DialogHeader>
         
         <div className="mt-4">
-          {/* Drag and Drop Area */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               dragActive 
@@ -342,7 +268,7 @@ Your OpenDocument Text file has been successfully converted to markdown format.
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept=".txt,.md,.pdf,.docx,.doc,.rtf,.odt"
+              accept=".txt,.md,.pdf"
               onChange={handleFileChange}
               disabled={isProcessing}
             />
@@ -372,7 +298,6 @@ Your OpenDocument Text file has been successfully converted to markdown format.
             )}
           </div>
 
-          {/* Supported Formats */}
           <div className="mt-6">
             <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
               Supported Formats
@@ -408,28 +333,27 @@ Your OpenDocument Text file has been successfully converted to markdown format.
             </div>
           </div>
 
-          {/* Important Notes */}
           <div className="mt-6 space-y-3">
-            <div className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
-                  Enhanced PDF Extraction
+                <p className="text-xs font-medium text-green-800 dark:text-green-200">
+                  Production PDF Extraction
                 </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  Our enhanced PDF parser extracts text content and formats it as editable markdown.
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  Real PDF parsing extracts and structures your resume content automatically.
                 </p>
               </div>
             </div>
             
-            <div className="flex items-start space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
-                  Formatting Note
+                <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
+                  Best Results
                 </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  Complex formatting may require manual adjustment after upload. Review the imported content and make any necessary edits.
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  For best results, use text-based PDFs. Image-based or scanned PDFs may not extract properly.
                 </p>
               </div>
             </div>

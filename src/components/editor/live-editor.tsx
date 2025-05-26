@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit3, Save, X } from "lucide-react";
+import { Edit3, Save, X, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LiveEditorProps {
@@ -19,21 +19,27 @@ export function LiveEditor({ content, onContentChange, className }: LiveEditorPr
   useEffect(() => {
     if (editingSection && textareaRef.current) {
       textareaRef.current.focus();
-      textareaRef.current.select();
+      // Auto-resize textarea
+      const textarea = textareaRef.current;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.max(120, textarea.scrollHeight)}px`;
     }
   }, [editingSection]);
 
   const parseContentSections = (text: string) => {
-    const sections: { id: string; title: string; content: string; fullContent: string }[] = [];
+    if (!text.trim()) return [];
+    
+    const sections: { id: string; title: string; content: string; fullContent: string; level: number }[] = [];
     const lines = text.split('\n');
     
-    let currentSection = { id: '', title: '', content: '', fullContent: '' };
+    let currentSection = { id: '', title: '', content: '', fullContent: '', level: 0 };
     let sectionIndex = 0;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
       
-      if (line.startsWith('# ') || line.startsWith('## ') || line.startsWith('### ')) {
+      if (headerMatch) {
         // Save previous section if it exists
         if (currentSection.title) {
           sections.push({ ...currentSection });
@@ -41,15 +47,21 @@ export function LiveEditor({ content, onContentChange, className }: LiveEditorPr
         
         // Start new section
         sectionIndex++;
+        const level = headerMatch[1].length;
+        const title = headerMatch[2];
+        
         currentSection = {
           id: `section-${sectionIndex}`,
-          title: line.replace(/^#+\s*/, ''),
+          title,
           content: '',
-          fullContent: line
+          fullContent: line,
+          level
         };
       } else {
-        currentSection.content += line + '\n';
-        currentSection.fullContent += '\n' + line;
+        if (line.trim() || currentSection.content) {
+          currentSection.content += (currentSection.content ? '\n' : '') + line;
+          currentSection.fullContent += '\n' + line;
+        }
       }
     }
     
@@ -78,16 +90,7 @@ export function LiveEditor({ content, onContentChange, className }: LiveEditorPr
     if (sectionIndex === -1) return;
     
     const newSections = [...sections];
-    const lines = editContent.split('\n');
-    const headerLine = lines[0];
-    const bodyContent = lines.slice(1).join('\n');
-    
-    newSections[sectionIndex] = {
-      ...newSections[sectionIndex],
-      title: headerLine.replace(/^#+\s*/, ''),
-      content: bodyContent,
-      fullContent: editContent
-    };
+    newSections[sectionIndex].fullContent = editContent;
     
     // Reconstruct the full content
     const newContent = newSections.map(section => section.fullContent).join('\n\n');
@@ -95,29 +98,48 @@ export function LiveEditor({ content, onContentChange, className }: LiveEditorPr
     setEditingSection(null);
   };
 
+  const handleDeleteSection = (sectionId: string) => {
+    const filteredSections = sections.filter(s => s.id !== sectionId);
+    const newContent = filteredSections.map(section => section.fullContent).join('\n\n');
+    onContentChange(newContent);
+  };
+
+  const handleAddSection = () => {
+    const newSection = '\n\n## New Section\n\nAdd your content here...';
+    onContentChange(content + newSection);
+  };
+
   const handleCancelEdit = () => {
     setEditingSection(null);
     setEditContent("");
   };
 
-  const renderSection = (section: { id: string; title: string; content: string; fullContent: string }) => {
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditContent(e.target.value);
+    // Auto-resize
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(120, textarea.scrollHeight)}px`;
+  };
+
+  const renderSection = (section: { id: string; title: string; content: string; fullContent: string; level: number }, index: number) => {
     const isEditing = editingSection === section.id;
     
     if (isEditing) {
       return (
-        <div key={section.id} className="relative group">
-          <div className="space-y-2">
+        <div key={section.id} className="relative group border border-blue-300 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+          <div className="space-y-3">
             <textarea
               ref={textareaRef}
               value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="w-full p-3 border rounded-lg font-mono text-sm resize-vertical min-h-[120px]"
+              onChange={handleTextareaChange}
+              className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Edit section content..."
             />
             <div className="flex space-x-2">
-              <Button size="sm" onClick={handleSaveSection}>
+              <Button size="sm" onClick={handleSaveSection} className="bg-green-600 hover:bg-green-700">
                 <Save className="h-3 w-3 mr-1" />
-                Save
+                Save Changes
               </Button>
               <Button size="sm" variant="outline" onClick={handleCancelEdit}>
                 <X className="h-3 w-3 mr-1" />
@@ -129,36 +151,86 @@ export function LiveEditor({ content, onContentChange, className }: LiveEditorPr
       );
     }
 
+    const HeaderTag = `h${Math.min(section.level + 1, 6)}` as keyof JSX.IntrinsicElements;
+    const headerClasses = {
+      1: "text-2xl font-bold text-gray-900 dark:text-white",
+      2: "text-xl font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 pb-1",
+      3: "text-lg font-medium text-gray-700 dark:text-gray-300"
+    };
+
     return (
-      <div key={section.id} className="relative group hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors">
+      <div key={section.id} className="relative group hover:bg-gray-50 dark:hover:bg-gray-800/50 p-3 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
         <div className="prose prose-sm max-w-none">
-          <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1">
+          <HeaderTag className={`mb-3 ${headerClasses[section.level as keyof typeof headerClasses] || headerClasses[3]}`}>
             {section.title}
-          </h2>
-          <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-            {section.content.trim()}
+          </HeaderTag>
+          <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+            {section.content.trim() || (
+              <span className="text-gray-400 italic">No content yet...</span>
+            )}
           </div>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
-          onClick={() => handleEditSection(section.id)}
-        >
-          <Edit3 className="h-3 w-3" />
-        </Button>
+        
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
+            onClick={() => handleEditSection(section.id)}
+            title="Edit section"
+          >
+            <Edit3 className="h-3 w-3" />
+          </Button>
+          {sections.length > 1 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900 text-red-600"
+              onClick={() => handleDeleteSection(section.id)}
+              title="Delete section"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       </div>
     );
   };
 
   return (
-    <Card className={cn("h-full", className)}>
-      <CardContent className="p-6 space-y-6">
+    <Card className={cn("h-full flex flex-col", className)}>
+      <CardContent className="flex-1 p-4 space-y-4 overflow-auto">
         {sections.length > 0 ? (
-          sections.map(renderSection)
+          <>
+            {sections.map(renderSection)}
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddSection}
+                className="border-dashed border-2 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add New Section
+              </Button>
+            </div>
+          </>
         ) : (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-            <p>Start writing your resume content to see live editing options.</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="text-gray-400 mb-4">
+              <Edit3 className="h-12 w-12 mx-auto mb-2" />
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              No content yet. Start writing your resume to see live editing options.
+            </p>
+            <Button
+              variant="outline"
+              onClick={handleAddSection}
+              className="border-dashed border-2"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add First Section
+            </Button>
           </div>
         )}
       </CardContent>

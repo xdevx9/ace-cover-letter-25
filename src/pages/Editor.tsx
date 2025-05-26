@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -216,10 +215,8 @@ const Editor = () => {
 
         <div className="container mx-auto p-2 sm:p-4">
           <div className={`
-            flex flex-col gap-4 transition-all duration-300
-            ${isMobileView ? 'space-y-4' : ''}
-            ${!isMobileView && showAITools ? 'lg:grid lg:grid-cols-[1fr,2fr] lg:mr-96' : ''}
-            ${!isMobileView && !showAITools ? 'lg:grid lg:grid-cols-2' : ''}
+            transition-all duration-300
+            ${showAITools && !isMobileView ? 'mr-96' : ''}
             min-h-[calc(100vh-120px)]
           `}>
             <ErrorBoundary>
@@ -231,14 +228,7 @@ const Editor = () => {
                 onCoverLetterChange={setCoverLetterContent}
                 onApplyTranslation={handleTranslation}
                 isMobile={isMobileView}
-              />
-            </ErrorBoundary>
-
-            <ErrorBoundary>
-              <PreviewPanel
-                content={currentContent}
-                onExportPDF={handleExportPDF}
-                isMobile={isMobileView}
+                onSave={handleSave}
               />
             </ErrorBoundary>
           </div>

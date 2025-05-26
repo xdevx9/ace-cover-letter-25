@@ -1,12 +1,10 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Plus, Trash2, Edit3, Bold, Italic, List, Image, Save } from "lucide-react";
+import { Eye, Plus, Trash2, Edit3, Save } from "lucide-react";
 import { MarkdownPreview } from "@/components/markdown-preview";
 import { ProfilePhotoUpload } from "@/components/editor/profile-photo-upload";
-import { DynamicFieldsManager } from "@/components/editor/dynamic-fields-manager";
 import { useToast } from "@/hooks/use-toast";
 
 interface VisualEditorProps {

@@ -1,16 +1,14 @@
+
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { AIToolsSidebar } from "@/components/ai-tools-sidebar";
 import { EditorHeader } from "@/components/editor/editor-header";
 import { EditorPanel } from "@/components/editor/editor-panel";
-import { PreviewPanel } from "@/components/editor/preview-panel";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { getDefaultResumeTemplate, getDefaultCoverLetterTemplate } from "@/utils/default-templates";
-import { exportToPDF } from "@/utils/pdf-export";
 
 const Editor = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
@@ -124,44 +122,6 @@ const Editor = () => {
     }
   };
 
-  const handleTranslation = (content: string) => {
-    try {
-      if (activeMode === 'resume') {
-        setResumeContent(content);
-      } else {
-        setCoverLetterContent(content);
-      }
-    } catch (error) {
-      console.error('Error applying translation:', error);
-      toast({
-        title: "Translation Error",
-        description: "Failed to apply translation.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleExportPDF = () => {
-    try {
-      const content = activeMode === 'resume' ? resumeContent : coverLetterContent;
-      const filename = activeMode === 'resume' ? 'resume' : 'cover-letter';
-      
-      exportToPDF(content, filename);
-      
-      toast({
-        title: "PDF Export Started",
-        description: "Opening print dialog. Choose 'Save as PDF' to download.",
-      });
-    } catch (error) {
-      console.error('Error exporting PDF:', error);
-      toast({
-        title: "Export Error",
-        description: "Failed to export PDF. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleSave = () => {
     try {
       const content = activeMode === 'resume' ? resumeContent : coverLetterContent;
@@ -226,7 +186,7 @@ const Editor = () => {
                 coverLetterContent={coverLetterContent}
                 onResumeChange={setResumeContent}
                 onCoverLetterChange={setCoverLetterContent}
-                onApplyTranslation={handleTranslation}
+                onApplyTranslation={() => {}}
                 isMobile={isMobileView}
                 onSave={handleSave}
               />

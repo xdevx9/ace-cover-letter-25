@@ -18,6 +18,18 @@ const Editor = () => {
   const [coverLetterContent, setCoverLetterContent] = useState("");
   const [activeMode, setActiveMode] = useState<'resume' | 'cover-letter'>('resume');
   const [showAITools, setShowAITools] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  // Check for mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Initialize mode from URL params
   useEffect(() => {
@@ -135,8 +147,15 @@ const Editor = () => {
         currentContent={currentContent}
       />
 
-      <div className="container mx-auto p-4">
-        <div className={`grid gap-6 transition-all duration-300 ${showAITools ? 'lg:grid-cols-[1fr,2fr] mr-96' : 'lg:grid-cols-2'} h-[calc(100vh-120px)]`}>
+      <div className="container mx-auto p-2 sm:p-4">
+        {/* Mobile-first responsive layout */}
+        <div className={`
+          flex flex-col gap-4 transition-all duration-300
+          ${isMobileView ? 'space-y-4' : ''}
+          ${!isMobileView && showAITools ? 'lg:grid lg:grid-cols-[1fr,2fr] lg:mr-96' : ''}
+          ${!isMobileView && !showAITools ? 'lg:grid lg:grid-cols-2' : ''}
+          min-h-[calc(100vh-120px)]
+        `}>
           <EditorPanel
             activeMode={activeMode}
             resumeContent={resumeContent}
@@ -144,11 +163,13 @@ const Editor = () => {
             onResumeChange={setResumeContent}
             onCoverLetterChange={setCoverLetterContent}
             onApplyTranslation={handleTranslation}
+            isMobile={isMobileView}
           />
 
           <PreviewPanel
             content={currentContent}
             onExportPDF={handleExportPDF}
+            isMobile={isMobileView}
           />
         </div>
       </div>

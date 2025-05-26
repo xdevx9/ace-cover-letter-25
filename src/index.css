@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -97,5 +91,94 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Mobile-first touch-friendly styles */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .mobile-touch {
+    @apply touch-target active:scale-95 transition-transform duration-75;
+  }
+  
+  /* Enhanced focus styles for accessibility */
+  .focus-enhanced {
+    @apply focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+  }
+  
+  /* Responsive text scaling */
+  .text-responsive {
+    @apply text-sm sm:text-base lg:text-lg;
+  }
+  
+  /* Mobile-optimized spacing */
+  .spacing-mobile {
+    @apply p-2 sm:p-4 lg:p-6;
+  }
+  
+  /* Touch-friendly button styles */
+  .btn-touch {
+    @apply min-h-[44px] px-4 py-3 text-base font-medium;
+  }
+}
+
+/* Custom scrollbar for better mobile experience */
+@layer components {
+  .scroll-smooth-mobile {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .scroll-smooth-mobile::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .scroll-smooth-mobile::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scroll-smooth-mobile::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+  
+  .scroll-smooth-mobile::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Responsive animations */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-on-scroll {
+    animation: fadeInUp 0.6s ease-out;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Print optimizations */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-optimize {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.4;
   }
 }

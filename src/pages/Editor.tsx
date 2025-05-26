@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownPreview } from "@/components/markdown-preview";
 import { AIToolsSidebar } from "@/components/ai-tools-sidebar";
+import { TemplatesDialog } from "@/components/templates-dialog";
+import { TranslationDialog } from "@/components/translation-dialog";
+import { ExportDialog } from "@/components/export-dialog";
+import { UploadDialog } from "@/components/upload-dialog";
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -20,9 +23,8 @@ const Editor = () => {
   
   const [resumeContent, setResumeContent] = useState("");
   const [coverLetterContent, setCoverLetterContent] = useState("");
-  const [activeMode, setActiveMode] = useState<'resume' | 'cover-letter'>('resume');
+  const [activeMode, setActiveMode<'resume' | 'cover-letter'>('resume');
   const [showAITools, setShowAITools] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
 
   // Initialize mode from URL params
   useEffect(() => {
@@ -162,50 +164,102 @@ Your Name
 *This cover letter was created with ResumeAce*`;
   };
 
-  const handleExport = (format: 'html' | 'pdf' | 'txt') => {
-    const content = activeMode === 'resume' ? resumeContent : coverLetterContent;
-    const filename = activeMode === 'resume' ? 'resume' : 'cover-letter';
-    
-    if (format === 'txt') {
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${filename}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
+  const handleUploadFile = (content: string, filename: string) => {
+    if (activeMode === 'resume') {
+      setResumeContent(content);
+    } else {
+      setCoverLetterContent(content);
     }
-    
     toast({
-      title: "Export Started",
-      description: `Exporting ${activeMode} as ${format.toUpperCase()}...`,
+      title: "File Uploaded",
+      description: `${filename} has been imported and converted to markdown.`,
     });
   };
 
-  const handleUpload = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.txt,.md';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const content = e.target?.result as string;
-          if (activeMode === 'resume') {
-            setResumeContent(content);
-          } else {
-            setCoverLetterContent(content);
-          }
-          toast({
-            title: "File Uploaded",
-            description: `${file.name} has been loaded into the editor.`,
-          });
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
+  const handleApplyTemplate = (content: string) => {
+    if (activeMode === 'resume') {
+      setResumeContent(content);
+    } else {
+      setCoverLetterContent(content);
+    }
+    toast({
+      title: "Template Applied",
+      description: `${activeMode === 'resume' ? 'Resume' : 'Cover letter'} template has been applied.`,
+    });
+  };
+
+  const handleTranslation = (content: string) => {
+    if (activeMode === 'resume') {
+      setResumeContent(content);
+    } else {
+      setCoverLetterContent(content);
+    }
+  };
+
+  const handleExportPDF = () => {
+    const content = activeMode === 'resume' ? resumeContent : coverLetterContent;
+    const filename = activeMode === 'resume' ? 'resume' : 'cover-letter';
+    
+    // Create a print-friendly version
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <title>${filename}</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+            margin: 0;
+            padding: 1rem;
+            color: #000;
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.3rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        h3 { font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; }
+        ul { margin: 0.5rem 0; }
+        li { margin-bottom: 0.25rem; }
+        hr { margin: 1rem 0; }
+        @page { margin: 0.75in; }
+    </style>
+</head>
+<body>
+${convertMarkdownToHTML(content)}
+</body>
+</html>`;
+      
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+    
+    toast({
+      title: "PDF Export",
+      description: "Opening print dialog. Choose 'Save as PDF' from print options.",
+    });
+  };
+
+  const convertMarkdownToHTML = (markdown: string): string => {
+    return markdown
+      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/^\* (.*$)/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+      .replace(/^---$/gm, '<hr>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^(.*)$/gm, '<p>$1</p>')
+      .replace(/<p><h/g, '<h')
+      .replace(/<\/h([1-6])><\/p>/g, '</h$1>')
+      .replace(/<p><ul>/g, '<ul>')
+      .replace(/<\/ul><\/p>/g, '</ul>')
+      .replace(/<p><hr><\/p>/g, '<hr>')
+      .replace(/<p><\/p>/g, '');
   };
 
   const handleSave = () => {
@@ -257,21 +311,19 @@ Your Name
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)}>
-                Templates
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleUpload}>
-                <Upload className="h-4 w-4 mr-1" />
-                Upload
-              </Button>
+              <TemplatesDialog 
+                onApplyTemplate={handleApplyTemplate}
+                activeMode={activeMode}
+              />
+              <UploadDialog onFileUpload={handleUploadFile} />
               <Button variant="outline" size="sm" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-1" />
                 Save
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleExport('txt')}>
-                <Download className="h-4 w-4 mr-1" />
-                Export
-              </Button>
+              <ExportDialog 
+                content={activeMode === 'resume' ? resumeContent : coverLetterContent}
+                filename={activeMode === 'resume' ? 'resume' : 'cover-letter'}
+              />
               <Button 
                 variant="default" 
                 size="sm" 
@@ -301,10 +353,10 @@ Your Name
                   </Badge>
                 </CardTitle>
                 <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm">
-                    <Globe className="h-4 w-4 mr-1" />
-                    Translate
-                  </Button>
+                  <TranslationDialog 
+                    currentContent={activeMode === 'resume' ? resumeContent : coverLetterContent}
+                    onApplyTranslation={handleTranslation}
+                  />
                   <Button variant="ghost" size="sm">
                     <RotateCcw className="h-4 w-4" />
                   </Button>
@@ -343,7 +395,7 @@ Your Name
                 </CardTitle>
                 <div className="flex items-center space-x-2">
                   <Badge variant="secondary">Auto-save</Badge>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleExportPDF}>
                     <Download className="h-4 w-4 mr-1" />
                     PDF
                   </Button>
